@@ -52,7 +52,7 @@ mypwent *mygetpwnam(char *name) {
  Update password entry for user.
  
  Upon error, or if the user couldn't be found, -1 is returned,
- otherwise 0.
+ otherwise 1.
  */
 int mysetpwent(char *name, mypwent *pw) {
 	FILE *file;
