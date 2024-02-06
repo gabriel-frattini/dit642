@@ -17,10 +17,15 @@
 #define FALSE 0
 #define LENGTH 16
 
-void sighandler() {
-
+void sighandler(int signum) {
+	
 	/* add signalhandling routines here */
 	/* see 'man 2 signal' */
+	//	Set of signals to block
+	//printf("Program can not be terminated with %d\n", signum);
+	if(signum == 2 || signum == 20) {
+		printf("You can not exit.");
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -38,7 +43,10 @@ int main(int argc, char *argv[]) {
 	char prompt[] = "password: ";
 	char *user_pass;
 
-	sighandler();
+	int MAX_ATTEMPTS = 5;
+
+	signal(SIGINT, sighandler);
+	signal(SIGTSTP, sighandler);
 
 	while (TRUE) {
 		/* check what important variable contains - do not remove, part of buffer overflow test */
@@ -60,26 +68,52 @@ int main(int argc, char *argv[]) {
 		printf("Value of variable 'important 2' after input of login name: %*.*s\n",
 		 		LENGTH - 1, LENGTH - 1, important2);
 
-			
-		user_pass = getpass(prompt);
+		// Swap end with \n with \0
+		user[strcspn(user, "\n")] = '\0';
+
 		passwddata = mygetpwnam(user);
 
-		if (passwddata != NULL) {
-			/* You have to encrypt user_pass for this to work */
-			/* Don't forget to include the salt */
-
-			if (!strcmp(user_pass, passwddata->passwd)) {
-
-				printf(" You're in !\n");
-
-				/*  check UID, see setuid(2) */
-				/*  start a shell, use execve(2) */
-
-			}
-		}
-		else {
+		if (passwddata == NULL) {
 			printf("Login Incorrect \n");
+			continue;
 		}
-	}
+
+		if(passwddata->pwfailed >= MAX_ATTEMPTS) {
+			printf("Too many failed attempts. Your account is locked.\n");
+			return 0;
+		}
+		user_pass = getpass(prompt);
+
+		/* You have to encrypt user_pass for this to work */
+		/* Don't forget to include the salt */
+		char* enc_user_pass = crypt(user_pass, passwddata->passwd_salt);
+
+		if (!strcmp(enc_user_pass, passwddata->passwd)) {
+			passwddata->pwfailed = 0;
+			passwddata->pwage++;
+
+			printf(" You're in !\n");
+
+			if (passwddata->pwage > 10) {
+				printf("Do you want to change password?:");
+				char answer[3];
+				fgets(answer, 3, stdin);	
+				
+				answer[strcspn(answer, "\n")] = '\0';
+				if (strcmp(answer, "y") == 0) {
+					c_pass = getpass(prompt);
+					passwddata->passwd = crypt(c_pass, passwddata->passwd_salt);
+					passwddata->pwage = 0;
+				}
+			}
+
+			/*  check UID, see setuid(2) */
+			/*  start a shell, use execve(2) */
+
+		} else {
+			passwddata->pwfailed++;
+		}
+		mysetpwent(user, passwddata);
+		}
 	return 0;
 }

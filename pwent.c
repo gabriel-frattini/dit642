@@ -42,7 +42,6 @@ mypwent *mygetpwnam(char *name) {
 			return &ent;
 		}
 	}
-
 	fclose(file);
 
 	return NULL;
@@ -62,19 +61,20 @@ int mysetpwent(char *name, mypwent *pw) {
 
 	int status = -1;
 
+
 	if ((file = fopen(MYPWENT_FILENAME, "rb")) == NULL)
 		return -1;
 	if ((newfile = fopen(MYPWENT_TMP_FILENAME, "wb")) == NULL) {
 		fclose(file);
 		return -1;
 	}
-
 	/* Read each line, looking for the right entry. */
 	while (fgets(buffer, sizeof(buffer), file) != NULL) {
 		if (sscanf(buffer, "%[^:]", pwname) != 1) {
 			status = -1;
 			break;
 		}
+
 
 		/* See if we found the entry to be updated. */
 		if (strcmp(pwname, name) == 0) {
