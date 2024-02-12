@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
 
 	signal(SIGINT, sighandler);
 	signal(SIGTSTP, sighandler);
+	signal(SIGQUIT, sighandler);
 
 	while (TRUE) {
 		/* check what important variable contains - do not remove, part of buffer overflow test */
@@ -102,19 +103,24 @@ int main(int argc, char *argv[]) {
 				}
 			}
 
+			passwddata->pwage++;
+			passwddata->pwfailed = 0;
+
+			mysetpwent(user, passwddata);
 			/*  check UID, see setuid(2) */
 			/*  start a shell, use execve(2) */
 			printf("Starting terminal..\n");
 			if(setuid(passwddata->uid) != 0) {
 				printf("Error setting uid. \n\n");
-				break;
+				exit(1);	
 			}
-			execve("/bin/sh", NULL, NULL);
-
+			if(execve("/bin/sh", NULL, NULL) != 0) {
+				exit(1);
+			}
 		} else {
 			passwddata->pwfailed++;
+			mysetpwent(user, passwddata);
 		}
-		mysetpwent(user, passwddata);
-		}
+	}
 	return 0;
 }
