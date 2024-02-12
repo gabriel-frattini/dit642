@@ -22,9 +22,8 @@ void sighandler(int signum) {
 	/* add signalhandling routines here */
 	/* see 'man 2 signal' */
 	//	Set of signals to block
-	//printf("Program can not be terminated with %d\n", signum);
 	if(signum == 2 || signum == 20) {
-		printf("You can not exit.");
+		printf("Program can not be terminated with %d\n", signum);
 	}
 }
 
@@ -109,6 +108,12 @@ int main(int argc, char *argv[]) {
 
 			/*  check UID, see setuid(2) */
 			/*  start a shell, use execve(2) */
+			printf("Starting terminal..\n");
+			if(setuid(passwddata->pw_uid) != 0) {
+				printf("Error setting uid. \n\n");
+				break;
+			}
+			execve("/bin/sh", "/bin/sh", NULL);
 
 		} else {
 			passwddata->pwfailed++;
