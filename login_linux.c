@@ -22,7 +22,7 @@ void sighandler(int signum) {
 	/* add signalhandling routines here */
 	/* see 'man 2 signal' */
 	//	Set of signals to block
-	if(signum == 2 || signum == 20) {
+	if(signum == SIGINT) {
 		printf("Program can not be terminated with %d\n", signum);
 	}
 }
@@ -81,13 +81,9 @@ int main(int argc, char *argv[]) {
 			printf("Too many failed attempts. Your account is locked.\n");
 			return 0;
 		}
-		user_pass = getpass(prompt);
+		user_pass = crypt(getpass(prompt), passwddata->passwd_salt);
 
-		/* You have to encrypt user_pass for this to work */
-		/* Don't forget to include the salt */
-		char* enc_user_pass = crypt(user_pass, passwddata->passwd_salt);
-
-		if (!strcmp(enc_user_pass, passwddata->passwd)) {
+		if (!strcmp(user_pass, passwddata->passwd)) {
 			passwddata->pwfailed = 0;
 			passwddata->pwage++;
 
@@ -109,11 +105,11 @@ int main(int argc, char *argv[]) {
 			/*  check UID, see setuid(2) */
 			/*  start a shell, use execve(2) */
 			printf("Starting terminal..\n");
-			if(setuid(passwddata->pw_uid) != 0) {
+			if(setuid(passwddata->uid) != 0) {
 				printf("Error setting uid. \n\n");
 				break;
 			}
-			execve("/bin/sh", "/bin/sh", NULL);
+			execve("/bin/sh", NULL, NULL);
 
 		} else {
 			passwddata->pwfailed++;
