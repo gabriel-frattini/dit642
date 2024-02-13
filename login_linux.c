@@ -22,7 +22,7 @@ void sighandler(int signum) {
 	/* add signalhandling routines here */
 	/* see 'man 2 signal' */
 	//	Set of signals to block
-	if(signum == SIGINT) {
+	if(signum == SIGINT || signum == SIGTSTP || signum == SIGQUIT) {
 		printf("Program can not be terminated with %d\n", signum);
 	}
 }
@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
 
 	int MAX_ATTEMPTS = 5;
 
+    // Block these signals
 	signal(SIGINT, sighandler);
 	signal(SIGTSTP, sighandler);
 	signal(SIGQUIT, sighandler);
@@ -59,6 +60,7 @@ int main(int argc, char *argv[]) {
 		fflush(NULL); /* Flush all  output buffers */
 		__fpurge(stdin); /* Purge any data in stdin buffer */
 
+        // Use fgets to avoid buffer overflow
 		if (fgets(user, LENGTH, stdin) == NULL) /* gets() is vulnerable to buffer */
 			exit(0); /*  overflow attacks.  */
 
@@ -82,19 +84,20 @@ int main(int argc, char *argv[]) {
 			printf("Too many failed attempts. Your account is locked.\n");
 			return 0;
 		}
-		user_pass = crypt(getpass(prompt), passwddata->passwd_salt);
 
+        // Encrypt the password input and compare it with the stored password
+		user_pass = crypt(getpass(prompt), passwddata->passwd_salt);
 		if (!strcmp(user_pass, passwddata->passwd)) {
-			passwddata->pwfailed = 0;
+			passwddata->pwfailed = 0; // Reset failed attempts on successful login
 			passwddata->pwage++;
 
 			printf(" You're in !\n");
-
-			if (passwddata->pwage > 10) {
+			if (passwddata->pwage > 10) { // Change password after 10 logins
 				printf("Do you want to change password?:");
 				char answer[3];
 				fgets(answer, 3, stdin);	
 				
+                // fgets adds \n to the end of the string, it needs to be \0
 				answer[strcspn(answer, "\n")] = '\0';
 				if (strcmp(answer, "y") == 0) {
 					c_pass = getpass(prompt);
@@ -103,13 +106,13 @@ int main(int argc, char *argv[]) {
 				}
 			}
 
-			passwddata->pwage++;
-			passwddata->pwfailed = 0;
+			mysetpwent(user, passwddata); // Write changes to file
 
-			mysetpwent(user, passwddata);
 			/*  check UID, see setuid(2) */
 			/*  start a shell, use execve(2) */
 			printf("Starting terminal..\n");
+
+            // Start shell with the user's uid
 			if(setuid(passwddata->uid) != 0) {
 				printf("Error setting uid. \n\n");
 				exit(1);	
@@ -119,7 +122,7 @@ int main(int argc, char *argv[]) {
 			}
 		} else {
 			passwddata->pwfailed++;
-			mysetpwent(user, passwddata);
+			mysetpwent(user, passwddata); // Write changes to file
 		}
 	}
 	return 0;
